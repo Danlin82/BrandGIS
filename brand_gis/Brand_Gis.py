@@ -21,7 +21,11 @@
  *                                                                         *
  ***************************************************************************/
 """
-from asyncio.windows_events import NULL
+try: 
+    from asyncio.windows_events import NULL
+except:
+    pass
+
 from fileinput import filename
 from PyQt5.QtCore import QSettings, QTranslator, QCoreApplication, QObject, Qt
 from PyQt5.QtGui import QIcon
