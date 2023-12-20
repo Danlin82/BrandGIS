@@ -15,8 +15,6 @@ about=
 	Se mer information på:
 	https://ext-geoportal.lansstyrelsen.se/arcgis/apps/storymaps/collections/7b8f0317581240f9b8d6beacd840ad1e
 	
-changelog=
-    1.0 - Uppdatering i samband med BrandGIS paketet 0.9 och att man kan hämta Pluginet via QGIS Python Plugins Repository
 
 tracker=https://github.com/Danlin82/BrandGIS/issues
 repository=https://github.com/Danlin82/BrandGIS
@@ -52,5 +50,5 @@ Category of the plugin: Raster, Vector, Database or Web
 server=False
 
 changelog=
-	1.0.1	-	Fixed bug such as solving problems with the plugin in Linux environment.
+	1.0.1 - Fixed bug such as solving problems with the plugin in Linux environment.
 
