@@ -6,7 +6,7 @@
 name=BrandGIS
 qgisMinimumVersion=3.0
 description=BrandGIS Ledningsstöd och geografisk lägesbild vid brand i skog och mark
-version=1.0
+version=1.0.1
 author=Daniel Lind
 email=danolin82@gmail.com
 
@@ -50,4 +50,7 @@ Category of the plugin: Raster, Vector, Database or Web
 
 # If the plugin can run on QGIS Server.
 server=False
+
+changelog=
+	1.0.1	-	Fixed bug such as solving problems with the plugin in Linux environment.
 
