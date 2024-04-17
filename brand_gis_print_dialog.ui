@@ -17,7 +17,7 @@
    </sizepolicy>
   </property>
   <property name="windowTitle">
-   <string>BrandGIS PDF Export</string>
+   <string>BrandGIS PDF Export plugin v1.0.1</string>
   </property>
   <property name="toolTip">
    <string comment="dg" extracomment="dfgdfgd"/>
@@ -186,7 +186,7 @@
         <widget class="QLabel" name="label_3">
          <property name="text">
           <string>Filnamn blir Händelsens namn-Layoutens namn-datum och tid:
-Ex. Storskogensbrand-230301-1401-A3L_25K.pdf
+Ex. Storskogensbrand-240301-1401-A3L_25K.pdf
 
 </string>
          </property>

@@ -17,7 +17,7 @@
    </sizepolicy>
   </property>
   <property name="windowTitle">
-   <string>BrandGIS v1.1</string>
+   <string>BrandGIS plugin v1.0.2</string>
   </property>
   <widget class="Line" name="line_3">
    <property name="geometry">

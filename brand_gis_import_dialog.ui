@@ -20,7 +20,7 @@
    </sizepolicy>
   </property>
   <property name="windowTitle">
-   <string>BrandGIS Import v1.1</string>
+   <string>BrandGIS Import plugin v1.0.1</string>
   </property>
   <layout class="QGridLayout" name="gridLayout">
    <item row="6" column="0">
