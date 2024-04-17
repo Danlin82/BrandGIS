@@ -25,7 +25,7 @@ try:
     from asyncio.windows_events import NULL
 except:
     pass
-
+from .BrandGisSmhiFunctions import unloadBrandGisSmhiFunctions, initBrandGisSmhiFunctions
 from fileinput import filename
 from PyQt5.QtCore import QSettings, QTranslator, QCoreApplication, QObject, Qt
 from PyQt5.QtGui import QIcon
@@ -209,6 +209,7 @@ class BrandGis:
 
         # will be set False in run()
         self.first_start = True
+        initBrandGisSmhiFunctions()
 
 
     def unload(self):
@@ -218,6 +219,8 @@ class BrandGis:
                 self.tr(u'&Brand Gis'),
                 action)
             self.iface.removeToolBarIcon(action)
+            
+        unloadBrandGisSmhiFunctions()
 
 
     def select_output_logo(self):
