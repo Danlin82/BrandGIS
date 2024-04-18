@@ -1,0 +1,14 @@
+<RCC>
+    <qresource prefix="/plugins/Brand_Gis" >
+        <file>icon.png</file>
+		<file>pdf.png</file>
+		<file>import.png</file>
+		<file>mask.png</file>
+		<file>Brandgis_icon_allaPa.png</file>
+		<file>Brandgis_icon_allaAv.png</file>
+		<file>Brandgis_icon_tidPa.png</file>
+		<file>Brandgis_icon_tidOff.png</file>
+		<file>Brandgis_icon_inaktiveraTimeController.png</file>
+
+    </qresource>
+</RCC>
