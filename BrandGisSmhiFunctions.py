@@ -35,7 +35,7 @@ def filePathJson():                                 ## For use in Qgis
 
     qgis = QgsProject.instance().absolutePath()
     filename = 'smhiForcasts'
-    path = 'brandgis_1_resurser/gemensamma_resurser/smhi'
+    path = 'krisgis_1_resurser/gemensamma_resurser/smhi'
     fileType = 'json'
 
     filePath = f'{qgis}/{path}/{filename}.{fileType}'

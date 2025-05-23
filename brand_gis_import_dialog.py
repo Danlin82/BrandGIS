@@ -8,8 +8,8 @@
                              -------------------
         begin                : 2022-03-17
         git sha              : $Format:%H$
-        copyright            : (C) 2022 by Nässjö kommun
-        email                : info@nassjo.se
+        copyright            : (C) 2022 by Daniel Lind
+        email                : danolin82@gmail.com
  ***************************************************************************/
 
 /***************************************************************************
