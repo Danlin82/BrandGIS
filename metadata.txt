@@ -4,9 +4,9 @@
 
 [general]
 name=BrandGIS
-qgisMinimumVersion=3.0
-description=BrandGIS Ledningsstöd och geografisk lägesbild vid brand i skog och mark
-version=1.0.2
+qgisMinimumVersion=3.3
+description=BrandGIS Ledningsstöd och geografisk lägesbild vid brand i skog och mark.
+version=version 1.0.4
 author=Daniel Lind
 email=danolin82@gmail.com
 
@@ -33,11 +33,12 @@ homepage=https://github.com/Danlin82/BrandGIS/wiki
 category=Plugins
 icon=icon.png
 # experimental flag
-experimental=True
+experimental=False
 
 # deprecated flag (applies to the whole plugin, not just a single version)
 deprecated=False
 
+qgisMaximumVersion=3.99
 # Since QGIS 3.8, a comma separated list of plugins to be installed
 # (or upgraded) can be specified.
 # Check the documentation for more information.
@@ -50,6 +51,8 @@ Category of the plugin: Raster, Vector, Database or Web
 server=False
 
 changelog=
+	1.0.4 - Updated bugs and made functions to retrieve weather forecasts from SMHI, make dispersion buffers. Updated the plugin to work well with features that came with the last update from Länstyrelsen in the summer of 2025.
+	1.0.3 - Minor text edits in menun and metadata file.
 	1.0.2 - Implemented Qgis custom functions for SMHI API weather and fire risk values.
 	1.0.1 - Fixed bug such as solving problems with the plugin in Linux environment.
 

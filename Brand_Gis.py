@@ -8,8 +8,8 @@
                               -------------------
         begin                : 2022-03-17
         git sha              : $Format:%H$
-        copyright            : (C) 2022 by Nässjö kommun
-        email                : matning@nassjo.se
+        copyright            : (C) 2022 by Daniel Lind
+        email                : danolin82@gmail.com
  ***************************************************************************/
 
 /***************************************************************************
@@ -27,10 +27,10 @@ except:
     pass
 from .BrandGisSmhiFunctions import unloadBrandGisSmhiFunctions, initBrandGisSmhiFunctions
 from fileinput import filename
-from PyQt5.QtCore import QSettings, QTranslator, QCoreApplication, QObject, Qt
+from PyQt5.QtCore import QSettings, QTranslator, QCoreApplication, QObject, Qt, QVariant
 from PyQt5.QtGui import QIcon
 from PyQt5.QtWidgets import QAction, QFileDialog
-from qgis.core import QgsProject, QgsExpressionContextUtils, QgsApplication, QgsLayoutExporter, QgsLayoutItemMap, Qgis, QgsMapLayer, edit, QgsVectorLayerTemporalProperties
+from qgis.core import QgsProject, QgsExpressionContextUtils, QgsApplication, QgsLayoutExporter, QgsLayoutItemMap, Qgis, QgsMapLayer, edit, QgsVectorLayerTemporalProperties, QgsGeometry, QgsVectorLayer, QgsFeature, QgsProject, QgsField, QgsCoordinateReferenceSystem, QgsCoordinateTransform, QgsFeatureRequest
 from qgis.utils import iface
 from qgis import utils
 from qgis.PyQt.QtWidgets import QMessageBox
@@ -49,6 +49,11 @@ from .Brand_Gis_dialog import BrandGisDialog
 from .brand_gis_print_dialog import BrandGisPrintDialog
 from .brand_gis_import_dialog import BrandGisImportDialog
 import os.path
+from .createWedgeBuffer import fireWedge
+from .printDialogSmhi import dialogSmhi
+from .SmhiMeteorologicalForecasts import smhiForcast
+# from .utils import pluginSvgPath
+
 
 
 
@@ -69,16 +74,16 @@ class BrandGis:
         # initialize plugin directory
         self.plugin_dir = os.path.dirname(__file__)
         # initialize locale
-        locale = QSettings().value('locale/userLocale')[0:2]
-        locale_path = os.path.join(
-            self.plugin_dir,
-            'i18n',
-            'BrandGis_{}.qm'.format(locale))
+        # locale = QSettings().value('locale/userLocale')[0:2]
+        # locale_path = os.path.join(
+        #     self.plugin_dir,
+        #     'i18n',
+        #     'BrandGis_{}.qm'.format(locale))
 
-        if os.path.exists(locale_path):
-            self.translator = QTranslator()
-            self.translator.load(locale_path)
-            QCoreApplication.installTranslator(self.translator)
+        # if os.path.exists(locale_path):
+        #     self.translator = QTranslator()
+        #     self.translator.load(locale_path)
+        #     QCoreApplication.installTranslator(self.translator)
 
         # Declare instance attributes
         self.actions = []
@@ -185,7 +190,7 @@ class BrandGis:
 
         """Create the menu entries and toolbar icons inside the QGIS GUI."""
 
-        icon_path = ':/plugins/Brand_Gis/icon.png'
+        icon_path = ':/plugins/Brand_Gis/images/icon.png'
         self.add_action(
             icon_path,
             text=self.tr(u'Brand-Gis-Start'),
@@ -193,14 +198,14 @@ class BrandGis:
             parent=self.iface.mainWindow())
            
       
-        icon_path = ':/plugins/Brand_Gis/pdf.png'
+        icon_path = ':/plugins/Brand_Gis/images/pdf.png'
         self.add_action(
             icon_path,
             text=self.tr(u'Brand-Gis-PDF export'),
             callback=self.run2,
             parent=self.iface.mainWindow())
 
-        icon_path = ':/plugins/Brand_Gis/import.png'
+        icon_path = ':/plugins/Brand_Gis/images/import.png'
         self.add_action(
             icon_path,
             text=self.tr(u'Brand-Gis-import'),
@@ -210,6 +215,9 @@ class BrandGis:
         # will be set False in run()
         self.first_start = True
         initBrandGisSmhiFunctions()
+        if self.first_start == False:
+            self.pluginSvgPath()
+        
 
 
     def unload(self):
@@ -222,6 +230,25 @@ class BrandGis:
             
         unloadBrandGisSmhiFunctions()
 
+    def pluginSvgPath(self):
+        # Hämtar sökvägen till QGIS inställningskatalog
+        qgsProfilePath = QgsApplication.qgisSettingsDirPath()
+
+        # Skapar en ny sökväg till SVG-filerna för pluginet
+        newSvgPath = f'{qgsProfilePath}python/plugins/brand_gis/images/Brandgis plugin svg'
+        # Ersätter backslashes med forward slashes i sökvägen
+        newSvgPathRep = newSvgPath.replace('''\\''', '''/''')
+        # Hämtar nuvarande sökvägar för SVG-filer från QGIS inställningar
+        qgsSvgPaths = QSettings().value('svg/searchPathsForSVG')
+
+        # Kontrollerar om den nya sökvägen redan finns i inställningarna eller om den är None
+        if newSvgPathRep in qgsSvgPaths or newSvgPathRep is None:
+            print('svg path already in qgs settings')
+        else:
+            # Lägger till den nya sökvägen till listan över SVG-sökvägar
+            qgsSvgPaths.append(newSvgPath)
+            # Sparar den uppdaterade listan över SVG-sökvägar i QGIS inställningar
+            QSettings().setValue('svg/searchPathsForSVG', newSvgPathRep)
 
     def select_output_logo(self):
         filename, _filter = QFileDialog.getOpenFileName(
@@ -376,7 +403,8 @@ class BrandGis:
         for layer in layers:
 
             try:
-                if layer.type() == QgsMapLayer.VectorLayer and 'datumtid_start' in layer.fields().names() and layer.temporalProperties().isActive() == True:
+                # if layer.type() == QgsMapLayer.VectorLayer and 'datumtid_start' in layer.fields().names() and layer.temporalProperties().isActive() == True:
+                if layer.type() == QgsMapLayer.VectorLayer and layer.temporalProperties().isActive() == True:
 
                     propLayer = layer.temporalProperties()
 
@@ -394,7 +422,7 @@ class BrandGis:
     def run_open_project(self):
         filename3, _filter = QFileDialog.getOpenFileName(
             self.dlg, "Select   output file ","", 'All files (*.*)', str(QgsProject.instance().homePath()))
-        print(type(Path(filename3)))
+        # print(type(Path(filename3)))
         project = QgsProject.instance()
         project.read(filename3)
         self.getProjectVars()
@@ -402,13 +430,15 @@ class BrandGis:
 
 
     def open_pushButton_toolbar(self):
-        self.act1 = QAction(QIcon(':/plugins/Brand_Gis/mask.png'), QCoreApplication.translate('BrandGis tool', 'Maskera och avmaskera symboler.\n\n-Används ex med när man har ett ortofoto som bakgrund'), self.iface.mainWindow(),triggered=self.toggleMask)
-        self.act2 = QAction(QIcon(':/plugins/Brand_Gis/Brandgis_icon_allaAv.png'), QCoreApplication.translate('BrandGis tool', 'Visa bara aktuell symbologi.\nTar bort symbol som visar alla andra värden.\n\n-Kan användas tillsammans med tidskontroll'), self.iface.mainWindow(),triggered=self.hideAllFeatures)
-        self.act3 = QAction(QIcon(':/plugins/Brand_Gis/Brandgis_icon_allaPa.png'), QCoreApplication.translate('BrandGis tool', 'Visa all symbologi.\nLägger till en "aktuell" symbol som visar alla andra värden.\n\n-Kan användas tillsammans med tidskontroll'), self.iface.mainWindow(),triggered=self.viewAllFeatures)
-        self.act4 = QAction(QIcon(':/plugins/Brand_Gis/Brandgis_icon_tidPa.png'), QCoreApplication.translate('BrandGis tool', 'Lägger till tidsstyrning i lagerdefenitionen\nOm lagret har attributfältet "Giltig från" så används fälten "Giltig från" och "Giltig till" för tidssyrning.\n\n-Användas tillsammans med tidskontroll\n-Använd knappen "Visa" för att visa alla objekt. Finns det ingen symbol för attributet visas inte objektet.'), self.iface.mainWindow(),triggered=self.temporalLayerOn)
-        self.act5 = QAction(QIcon(':/plugins/Brand_Gis/Brandgis_icon_tidOff.png'), QCoreApplication.translate('BrandGis tool', 'Tar bort tidsstyrning i lagerdefenitionen\nOm lagret har attributfältet "Giltig från" så används fälten "Giltig från" och "Giltig till" för tidssyrning.\n\n-Användas tillsammans med tidskontroll\n-Använd knappen "Stäng" för att stänga alla visade objekt. Se till att stänga av tidskontrollen så den är inaktiverad'), self.iface.mainWindow(),triggered=self.temporalLayerOff)
-        self.act6 = QAction(QIcon(':/plugins/Brand_Gis/Brandgis_icon_inaktiveraTimeController.png'), QCoreApplication.translate('BrandGis tool', 'Inaktiverar Tidskontrollen\n\n -Om Tidskontrollen inte är inaktiverad så visas inte objekt utanför den aktuella tiden.\n -Funktionen finns i Tidskontrollen och heter "Stäng av tidsnavigering"'), self.iface.mainWindow(),triggered=self.unActivateTemporalController)
-       
+        self.act1 = QAction(QIcon(':/plugins/Brand_Gis/images/mask.png'), QCoreApplication.translate('BrandGis tool', 'Maskera och avmaskera symboler.\n\n-Används ex med när man har ett ortofoto som bakgrund'), self.iface.mainWindow(),triggered=self.toggleMask)
+        self.act2 = QAction(QIcon(':/plugins/Brand_Gis/images/Brandgis_icon_allaAv.png'), QCoreApplication.translate('BrandGis tool', 'Visa bara aktuell symbologi.\nTar bort symbol som visar alla andra värden.\n\n-Kan användas tillsammans med tidskontroll'), self.iface.mainWindow(),triggered=self.hideAllFeatures)
+        self.act3 = QAction(QIcon(':/plugins/Brand_Gis/images/Brandgis_icon_allaPa.png'), QCoreApplication.translate('BrandGis tool', 'Visa all symbologi.\nLägger till en "aktuell" symbol som visar alla andra värden.\n\n-Kan användas tillsammans med tidskontroll'), self.iface.mainWindow(),triggered=self.viewAllFeatures)
+        self.act4 = QAction(QIcon(':/plugins/Brand_Gis/images/Brandgis_icon_tidPa.png'), QCoreApplication.translate('BrandGis tool', 'Lägger till tidsstyrning i lagerdefenitionen\nOm lagret har attributfältet "Giltig från" så används fälten "Giltig från" och "Giltig till" för tidssyrning.\n\n-Användas tillsammans med tidskontroll\n-Använd knappen "Visa" för att visa alla objekt. Finns det ingen symbol för attributet visas inte objektet.'), self.iface.mainWindow(),triggered=self.temporalLayerOn)
+        self.act5 = QAction(QIcon(':/plugins/Brand_Gis/images/Brandgis_icon_tidOff.png'), QCoreApplication.translate('BrandGis tool', 'Tar bort tidsstyrning i lagerdefenitionen\nOm lagret har attributfältet "Giltig från" så används fälten "Giltig från" och "Giltig till" för tidssyrning.\n\n-Användas tillsammans med tidskontroll\n-Använd knappen "Stäng" för att stänga alla visade objekt. Se till att stänga av tidskontrollen så den är inaktiverad'), self.iface.mainWindow(),triggered=self.temporalLayerOff)
+        self.act6 = QAction(QIcon(':/plugins/Brand_Gis/images/Brandgis_icon_inaktiveraTimeController.png'), QCoreApplication.translate('BrandGis tool', 'Inaktiverar Tidskontrollen\n\n -Om Tidskontrollen inte är inaktiverad så visas inte objekt utanför den aktuella tiden.\n -Funktionen finns i Tidskontrollen och heter "Stäng av tidsnavigering"'), self.iface.mainWindow(),triggered=self.unActivateTemporalController)
+        self.act7 = QAction(QIcon(':/plugins/Brand_Gis/images/Brandgis_icon_BerSpridning.png'), QCoreApplication.translate('BrandGis tool', 'Beräkna ungefärlig brandutbredning.\n\n - Ange startpunkt genom att  klicka i kartan.\n - Fyll i tid, vindstyrka och vindriktning.\n\n Använd resultatet för att digitalisera din egen utbredning.'), self.iface.mainWindow(),triggered=self.createFireWedge)
+        self.act8 = QAction(QIcon(':/plugins/Brand_Gis/images/smhi-logo-120.png'), QCoreApplication.translate('BrandGis tool', 'Klicka i kartan på den plats du vill ha väderinformation om.\n - Fyll i tid.'), self.iface.mainWindow(),triggered=self.createSmhiForcast)
+        self.act9 = QAction(QIcon(':/plugins/Brand_Gis/images/copy_templayer.png'), QCoreApplication.translate('BrandGis tool', 'Kopiera ett lager till ett temporärt lager med stilar\n\n - Markera ett lager innan du trycker på knappen'), self.iface.mainWindow(),triggered=self.copyToTemplayer)
 
        
         #adds tools to the toolbar BrandGis-Toolbar.
@@ -443,6 +473,9 @@ class BrandGis:
         self.add_brandtoolbar.addSeparator()
         self.add_brandtoolbar.addSeparator()
         self.add_brandtoolbar.addAction(self.act1)
+        self.add_brandtoolbar.addAction(self.act7)
+        self.add_brandtoolbar.addAction(self.act8)
+        self.add_brandtoolbar.addAction(self.act9)
         self.add_brandtoolbar.addSeparator()
         self.add_brandtoolbar.addSeparator()
         self.add_brandtoolbar.addAction(self.act2)
@@ -544,7 +577,7 @@ class BrandGis:
         b_logg_time = now.strftime('%H:%M')
 
         b_project_path = QgsProject.instance().homePath()
-        b_logg_filename = '/brandgis_1_resurser/resurser_qgis/automatlogg_pdf/projektdata_loggbook.csv'
+        b_logg_filename = '/krisgis_1_resurser/resurser_qgis/automatlogg_pdf/projektdata_loggbook.csv'
         b_logg_filePath = Path(b_project_path+b_logg_filename)
         b_logg_filePathString = str(b_logg_filePath)
 
@@ -642,14 +675,14 @@ class BrandGis:
             if bgLayerHandelseId.type() == QgsMapLayer.VectorLayer and 'handelse_id' in bgLayerHandelseId.fields().names():
                 layerstateList.append([bgLayerHandelseId,bgLayerHandelseId.isModified(),bgLayerHandelseId.featureCount()])
                 
-        print('skapad :', len(layerstateList))
+        # print('skapad :', len(layerstateList))
 
         for checkLayerState in layerstateList:
             if checkLayerState[1] == True:
                 QMessageBox.warning(self.iface.mainWindow(), 'Information','Lager får inte ha osparade data, spara dina editeringar och testa igen!', QMessageBox.Ok)
                 status = 0
                 break
-        print('status: ',status)
+        # print('status: ',status)
 
         for layerState in layerstateList:
             '''Hämtar lager som har objekt och status visar att det inte finns osparade objekt, funktionen fungerar inte om något lager står i editerings läge
@@ -663,7 +696,7 @@ class BrandGis:
                     with edit(features[0]):
                         feature['handelse_id'] = handelseId
                         features[0].updateFeature(feature)
-                        print('Uppdaterar ',features[0],feature)
+                        # print('Uppdaterar ',features[0],feature)
 
                 self.iface.messageBar().pushMessage('Info','Uppdatering av Händelse ID klar', level=Qgis.Info, duration=6)
 
@@ -759,14 +792,109 @@ class BrandGis:
         else:
             self.dlg1.lineEditExpFold.setText(str(QgsExpressionContextUtils.projectScope(projectInstance).variable('B_pdf_exp_folder')))
             
+    def createFireWedge(self):
+
+        self.mapTool = fireWedge(self.iface)
+                
+        self.iface.mapCanvas().setMapTool(self.mapTool)
+
+    def createSmhiForcast(self):
+
+        self.mapTool = smhiForcast(self.iface)
+        
+        self.iface.mapCanvas().setMapTool(self.mapTool)
+
+
+    # def smhiTime(self):
+    #     t = dialogSmhi.getSmhiValidTimes()
+    #     self.dlg1.comboBoxSmhiDateTime.addItems(t.keys())
+
+    def copyToTemplayer(self):
+        # Kontrollera om ett lager är valt
+        layer = iface.activeLayer()
+
+        if not layer:
+            # Visa en popup med instruktioner
+            QMessageBox.information(None, "Inget lager vald", "Vänligen välj ett lager och tryck på knappen igen.")
+        else:
+            # Visa en popup med lagrets namn och fråga om det ska användas
+            reply = QMessageBox.question(None, "Bekräfta lager", f"Du har valt lagret: {layer.name()} \n\nVill du kopiera detta lager till ett temporärt lager? \nAlla data följer med till det nya lagret ", QMessageBox.Yes | QMessageBox.No, QMessageBox.Yes)
+
+            if reply == QMessageBox.Yes:
+                # Fortsätt med skriptet om användaren bekräftar
+                layer.selectAll()
+                new_layer = layer.materialize(QgsFeatureRequest().setFilterFids(layer.selectedFeatureIds()))
+                layer.removeSelection()
+                new_layer.setName(f'{new_layer.name()}-Temp') #Lagret får samman namn men med prefixet  -Temp
+                
+                style_a_name = layer.styleManager().currentStyle()
+                style_a = layer.styleManager().style(style_a_name)
+
+                if 'Brandgis-style' in new_layer.styleManager().styles():
+                    new_layer.styleManager().removeStyle('Brandgis-style')
+
+                new_layer.styleManager().addStyle('Brandgis-style', style_a)
+                new_layer.styleManager().setCurrentStyle('Brandgis-style')
+                QgsProject.instance().addMapLayer(new_layer, False) # Lägger till lagret men det syns inte i lagerlistan
+
+                root = QgsProject.instance().layerTreeRoot()
+                root.insertLayer(0, new_layer) #Lagret visas längst upp i lagerlistan.
+
+            else:
+                # Användaren valde att inte använda det valda lagret
+                QMessageBox.information(None, "Avbrutet", "Skriptet avbröts. Välj ett annat lager och försök igen.")
+
+
+    def smhiWeather(self):
+        
+        crs_transform = QgsCoordinateTransform(QgsProject.instance().crs(),QgsCoordinateReferenceSystem('EPSG:4326'),QgsProject.instance().transformContext())
+        lon = 0
+        lat = 0
+        if self.dlg1.checkBoxcanvascenter.isChecked():
+            extent = iface.mapCanvas().extent()
+            extent_4326 = crs_transform.transformBoundingBox(extent)
+            lon = extent_4326.center().x()
+            lat = extent_4326.center().y()
+        else:
+ 
+            layout_pdf = self.dlg1.comboBoxLayouts.currentText()    #the selected Layput from the project
+            projectInstance = QgsProject.instance()
+            layoutmanager = projectInstance.layoutManager()
+            layout = layoutmanager.layoutByName(layout_pdf)
+            map = layout.itemById('Karta1')
+
+            extent = map.extent()
+            
+            extent_4326 = crs_transform.transformBoundingBox(extent)
+            lon = extent_4326.center().x()
+            lat = extent_4326.center().y()
+        
+        t = self.dlg1.comboBoxSmhiDateTime.currentText()
+        v = dialogSmhi.getSmhiWeather(lon,lat,dialogSmhi.timeToSmhiTime(t))
+        self.dlg1.comboBoxwindDir.addItem(v['vindriktning'])
+        self.dlg1.comboBoxwindDir.setCurrentText(v['vindriktning'])
+        self.dlg1.lineEdit_layout_vind.setValue(int(v['ws']))
+        # print(v, lat, lon)
+        
 
     def run2(self):
         self.dlg1 = BrandGisPrintDialog()
-        self.dlg1.lineEditExpFold.setText(str(QgsProject.instance().homePath())+'/brandgis_3_export')
+        self.dlg1.lineEditExpFold.setText(str(QgsProject.instance().homePath())+'/krisgis_3_export')
         manager = QgsProject.instance().layoutManager()
         layouts = manager.printLayouts()
         projectInstance = QgsProject.instance()
         layouter=[]
+
+        t = dialogSmhi.getSmhiValidTimes()
+        self.dlg1.comboBoxSmhiDateTime.addItems(t.keys())
+
+
+        self.dlg1.comboBoxSmhiDateTime.setCurrentText(dialogSmhi.get_nearest_time(t.values()))
+        
+        self.dlg1.toolButtonGetSmhi.clicked.connect(self.smhiWeather) 
+
+  
+
         for layout in layouts:
             layouter.append(layout.name())
         
@@ -790,6 +918,9 @@ class BrandGis:
         # Populate the comboBox with names of all the loaded layers
         self.dlg1.comboBoxLayouts.addItems(layouter)    #List of layouts in the project to the GUI comboBox list.
         self.dlg1.comboBoxLayouts.setCurrentIndex(2)
+
+
+
         self.dlg1.pushButtonPdf.clicked.connect(self.exp_pdf)
         self.dlg1.pushButtonExpFold.clicked.connect(self.exp_pdf_folder)
         self.dlg1.pushButtonWind.clicked.connect(self.set_wind)        
@@ -803,21 +934,23 @@ class BrandGis:
 
     def run3(self):
         self.dlg2 = BrandGisImportDialog()
-        self.dlg.setWindowFlags(QtCore.Qt.WindowStaysOnTopHint)
+        self.dlg2.setWindowFlags(QtCore.Qt.WindowStaysOnTopHint)
         self.dlg2.pushButtonSourceFile.clicked.connect(self.text_pushButtonSourceFile)
         self.dlg2.pushButtonImportFile.clicked.connect(self.text_pushButtonImportFile)
         self.dlg2.pushButtonBackupFolder.clicked.connect(self.text_pushButtonBackupFile)
         self.dlg2.pushButtonImport.clicked.connect(self.importData)
       
 
-
+        # self.dlg1.comboBoxSmhiDateTime.currentIndexChanged.connect(self.smhiWeather())
         # show the dialog
         self.dlg2.show()
+        
 
      
 
     def run(self):
         """Run method that performs all the real work"""
+        
 
                                                           # Use if project variables shuld be imported to dialog when open.
             
@@ -842,8 +975,12 @@ class BrandGis:
             self.dlg.pushButton_update_handelseid.clicked.connect(self.changeHandelseid)
 
         self.latlontoolsDep()
-            
+        
+   
 
+        
+            
+        
         
 
         # show the dialog
